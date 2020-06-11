@@ -1,0 +1,64 @@
+{
+  "name": "react-optimized-image",
+  "version": "0.1.0",
+  "description": "React component for serving optimized images.",
+  "keywords": [
+    "react",
+    "component",
+    "images",
+    "image",
+    "optimize"
+  ],
+  "author": "Cyril Wanner <info@cyr.li>",
+  "homepage": "https://github.com/cyrilwanner/react-optimized-image#readme",
+  "license": "MIT",
+  "scripts": {
+    "build": "npm run build:components && npm run build:plugin && npm run build:types",
+    "build:components": "babel src/components --out-dir lib/components --delete-dir-on-start --extensions \".ts,.tsx\" --config-file ./.babelrc.components",
+    "build:plugin": "babel src/plugin --out-dir lib/plugin --delete-dir-on-start --extensions \".ts\" --config-file ./.babelrc.plugin",
+    "build:types": "tsc --emitDeclarationOnly",
+    "lint": "tsc --noEmit && eslint . --ext .ts --ext .tsx --ext .js",
+    "lint:fix": "npm run lint -- --fix",
+    "test": "jest",
+    "test:watch": "npm test -- --watch"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.1",
+    "@babel/core": "^7.10.2",
+    "@babel/preset-env": "^7.10.2",
+    "@babel/preset-react": "^7.10.1",
+    "@babel/preset-typescript": "^7.10.1",
+    "@types/jest": "^26.0.0",
+    "@types/react": "^16.9.36",
+    "@typescript-eslint/eslint-plugin": "^3.2.0",
+    "@typescript-eslint/parser": "^3.2.0",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb": "^18.1.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-import": "^2.21.2",
+    "eslint-plugin-jsx-a11y": "^6.2.3",
+    "eslint-plugin-prettier": "^3.1.3",
+    "eslint-plugin-react": "^7.20.0",
+    "eslint-plugin-react-hooks": "^2.5.0",
+    "jest": "^26.0.1",
+    "prettier": "^2.0.5",
+    "react": "^16.13.1",
+    "typescript": "^3.9.5"
+  },
+  "main": "lib/index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib",
+    "plugin.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyrilwanner/react-optimized-image.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cyrilwanner/react-optimized-image/issues"
+  }
+}
