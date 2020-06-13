@@ -1,7 +1,7 @@
 import * as BabelTypes from '@babel/types';
 import { Visitor, NodePath } from '@babel/traverse';
 import babelPluginSyntaxJsx from 'babel-plugin-syntax-jsx';
-import { isImportedJsxComponent } from './util';
+import { getImportedJsxComponent } from './util';
 import transformSvgComponent from './transform/svg';
 
 export interface Babel {
@@ -21,9 +21,10 @@ export default function ({ types }: Babel): { visitor: Visitor<PluginOptions>; i
       JSXElement(path) {
         if (path.node.openingElement.name.type === 'JSXIdentifier') {
           const binding = path.scope.getBinding(path.node.openingElement.name.name);
+          const component = getImportedJsxComponent(binding);
 
           // handle svg component
-          if (isImportedJsxComponent(binding, 'Svg')) {
+          if (component === 'Svg') {
             transformSvgComponent(types, path);
           }
         }

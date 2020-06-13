@@ -1,3 +1,4 @@
+import querystring from 'querystring';
 import {
   ImportDeclaration,
   ImportSpecifier,
@@ -6,11 +7,7 @@ import {
   JSXAttribute,
   JSXExpressionContainer,
   CallExpression,
-  StringLiteral,
-  BinaryExpression,
-  TemplateLiteral,
-  TemplateElement,
-  Identifier,
+  ArrayExpression,
 } from '@babel/types';
 import { NodePath } from '@babel/core';
 import { Binding } from '@babel/traverse';
@@ -56,13 +53,12 @@ export const getExportName = (node: ImportSpecifier | ImportDefaultSpecifier): s
 };
 
 /**
- * Check if the import statement belongs to a JSX Component
+ * Gets the JSX component name belonging to the import statement
  *
  * @param {Binding} [binding]
- * @param {string} component
- * @returns {boolean}
+ * @returns {string}
  */
-export const isImportedJsxComponent = (binding: Binding | undefined, component: string): boolean => {
+export const getImportedJsxComponent = (binding: Binding | undefined): string | undefined => {
   // handle import statements
   if (
     binding &&
@@ -76,31 +72,32 @@ export const isImportedJsxComponent = (binding: Binding | undefined, component: 
     // handle path specific imports like react-optimized-image/lib/components/Svg
     if (exportName === 'default') {
       if (binding.path.parent.source.value.startsWith('react-optimized-image/lib/components/')) {
-        return binding.path.parent.source.value.replace('react-optimized-image/lib/components/', '') === component;
+        return binding.path.parent.source.value.replace('react-optimized-image/lib/components/', '');
       }
     }
 
-    return exportName === component;
+    return exportName;
   }
 
   // todo: also handle require statements at the top of the file instead of imports
 
-  return false;
+  return undefined;
 };
 
 /**
- * Gets the src attribute of a JSX component
+ * Gets the specified attribute of a JSX component
  *
  * @param {NodePath<JSXElement>} path
+ * @param {string} attributeName
  * @returns {NodePath<JSXAttribute> | undefined}
  */
-export const getSrcAttribute = (path: NodePath<JSXElement>): NodePath<JSXAttribute> | undefined => {
+export const getAttribute = (path: NodePath<JSXElement>, attributeName: string): NodePath<JSXAttribute> | undefined => {
   if (path.node.openingElement.attributes) {
     let attribue;
 
     path.get('openingElement').traverse({
       JSXAttribute(attributePath) {
-        if (attributePath.node.name.name === 'src') {
+        if (attributePath.node.name.name === attributeName) {
           attribue = attributePath;
           attributePath.stop();
         }
@@ -114,24 +111,85 @@ export const getSrcAttribute = (path: NodePath<JSXElement>): NodePath<JSXAttribu
 };
 
 /**
- * Adds a query param to an import statement within the src attribute of a JSX component
+ * Gets the value of a boolean JSX attribute
+ *
+ * @param {NodePath<JSXElement>} path
+ * @param {string} attributeName
+ * @returns {boolean | undefined}
+ */
+export const getBooleanAttribute = (path: NodePath<JSXElement>, attributeName: string): boolean | undefined => {
+  const attribute = getAttribute(path, attributeName);
+
+  if (attribute) {
+    if (attribute.node.value === null) {
+      return true;
+    }
+
+    if (
+      attribute.node.value.type === 'JSXExpressionContainer' &&
+      attribute.node.value.expression.type === 'BooleanLiteral'
+    ) {
+      return attribute.node.value.expression.value;
+    }
+
+    // todo: better error message with link to docs when ready & create test for this error
+    attribute.get('value').buildCodeFrameError('Only static boolean values are allowed');
+  }
+
+  return undefined;
+};
+
+/**
+ * Gets the value of a numbered array JSX attribute
+ *
+ * @param {NodePath<JSXElement>} path
+ * @param {string} attributeName
+ * @returns {number[] | undefined}
+ */
+export const getNumberedArrayAttribute = (path: NodePath<JSXElement>, attributeName: string): number[] | undefined => {
+  const attribute = getAttribute(path, attributeName);
+
+  if (attribute) {
+    if (
+      attribute.node.value &&
+      attribute.node.value.type === 'JSXExpressionContainer' &&
+      attribute.node.value.expression.type === 'ArrayExpression'
+    ) {
+      const values: number[] = [];
+
+      attribute.node.value.expression.elements.forEach((element, i) => {
+        if (element && element.type === 'NumericLiteral') {
+          values.push(element.value);
+        } else if (element) {
+          // todo: better error message with link to docs when ready & create test for this error
+          (((attribute.get('value') as NodePath<JSXExpressionContainer>).get('expression') as NodePath<
+            ArrayExpression
+          >).get(`elements.${i}`) as NodePath).buildCodeFrameError('Only static number values are allowed');
+        }
+      });
+
+      return values;
+    }
+
+    // todo: better error message with link to docs when ready & create test for this error
+    attribute.get('value').buildCodeFrameError('Only static array with number values is allowed');
+  }
+
+  return undefined;
+};
+
+/**
+ * Get all arguments of a require call.
+ * If it references a variable from an import statement, it converts it to require arguments.
  *
  * @param {Babel['types']} types
  * @param {NodePath<JSXAttribute>} path
- * @param {string} key
- * @param {string} [value]
+ * @returns {CallExpression['arguments'] | undefined}
  */
-export const addImportQueryParam = (
+export const getRequireArguments = (
   types: Babel['types'],
   path: NodePath<JSXAttribute>,
-  key: string,
-  value?: string,
-): void => {
-  const addQuery = (currentValue: string) =>
-    `${currentValue}${currentValue.indexOf('?') >= 0 ? '&' : '?'}${key}${
-      typeof value !== 'undefined' ? `=${value}` : ''
-    }`;
-
+): CallExpression['arguments'] | undefined => {
   // check for inline-require statement
   if (
     path.node.value &&
@@ -141,44 +199,7 @@ export const addImportQueryParam = (
     path.node.value.expression.callee.name === 'require' &&
     path.node.value.expression.arguments.length > 0
   ) {
-    const arg = path.node.value.expression.arguments[0];
-
-    // single string
-    if (arg.type === 'StringLiteral') {
-      const newValue = addQuery(arg.value);
-
-      (((path.get('value') as NodePath<JSXExpressionContainer>).get('expression') as NodePath<CallExpression>).get(
-        'arguments.0',
-      ) as NodePath<StringLiteral>).replaceWith(types.stringLiteral(newValue));
-    }
-
-    // concatenated string
-    if (arg.type === 'BinaryExpression' && arg.right.type === 'StringLiteral') {
-      const newValue = addQuery(arg.right.value);
-
-      (((path.get('value') as NodePath<JSXExpressionContainer>).get('expression') as NodePath<CallExpression>).get(
-        'arguments.0',
-      ) as NodePath<BinaryExpression>)
-        .get('right')
-        .replaceWith(types.stringLiteral(newValue));
-    }
-
-    // template literal
-    if (arg.type === 'TemplateLiteral' && arg.quasis.length > 0) {
-      const newValue = addQuery(arg.quasis[arg.quasis.length - 1].value.raw);
-
-      ((((path.get('value') as NodePath<JSXExpressionContainer>).get('expression') as NodePath<CallExpression>).get(
-        'arguments.0',
-      ) as NodePath<TemplateLiteral>).get(`quasis.${arg.quasis.length - 1}`) as NodePath<TemplateElement>).replaceWith(
-        types.templateElement(
-          {
-            raw: newValue,
-            cooked: newValue,
-          },
-          arg.quasis[arg.quasis.length - 1].tail,
-        ),
-      );
-    }
+    return path.node.value.expression.arguments;
   }
 
   // check for import reference
@@ -196,11 +217,86 @@ export const addImportQueryParam = (
       isImport(binding.path) &&
       binding.path.parent.type === 'ImportDeclaration'
     ) {
-      const newValue = addQuery(binding.path.parent.source.value);
+      return [types.stringLiteral(binding.path.parent.source.value)];
+    }
+  }
+};
 
-      ((path.get('value') as NodePath<JSXExpressionContainer>).get('expression') as NodePath<Identifier>).replaceWith(
-        types.callExpression(types.identifier('require'), [types.stringLiteral(newValue)]),
+/**
+ * Add new query params to an existing require string
+ *
+ * @param {string} currentValue
+ * @param {Record<string, unknown>} query
+ * @returns {string}
+ */
+export const addQueryToString = (currentValue: string, query: Record<string, string>): string => {
+  const parts = currentValue.split('?');
+  const existing = parts.length > 1 ? querystring.parse(parts[1]) : {};
+  const newQuery = { ...existing, ...query };
+
+  if (Object.keys(newQuery).length === 0) {
+    return parts[0];
+  }
+
+  const stringified = Object.keys(newQuery)
+    .map((key) => {
+      const value = newQuery[key];
+
+      if (Array.isArray(value)) {
+        value.map(
+          (singleValue) =>
+            `${querystring.escape(key)}${
+              typeof singleValue !== 'undefined' && singleValue !== '' ? `=${querystring.escape(singleValue)}` : ''
+            }`,
+        );
+      }
+
+      return `${querystring.escape(key)}${
+        typeof value !== 'undefined' && value !== '' ? `=${querystring.escape(`${value}`)}` : ''
+      }`;
+    })
+    .join('&');
+
+  return `${parts[0]}?${stringified}`;
+};
+
+/**
+ * Builds a new require statement with the given arguments and query params
+ *
+ * @param {Babel['types']} types
+ * @param {CallExpression['arguments']} existingArguments
+ * @param {Record<string, unkown>} query
+ * @returns {CallExpression}
+ */
+export const buildRequireStatement = (
+  types: Babel['types'],
+  existingArguments: CallExpression['arguments'],
+  query: Record<string, string>,
+): CallExpression => {
+  const args = [...existingArguments];
+
+  if (args.length > 0) {
+    // single string
+    if (args[0].type === 'StringLiteral') {
+      const newValue = addQueryToString(args[0].value, query);
+      args[0] = types.stringLiteral(newValue);
+    }
+
+    // concatenated string
+    if (args[0].type === 'BinaryExpression' && args[0].right.type === 'StringLiteral') {
+      const newValue = addQueryToString(args[0].right.value, query);
+      args[0].right = types.stringLiteral(newValue);
+    }
+
+    // template literal
+    if (args[0].type === 'TemplateLiteral' && args[0].quasis.length > 0) {
+      const newValue = addQueryToString(args[0].quasis[args[0].quasis.length - 1].value.raw, query);
+      args[0].quasis[args[0].quasis.length - 1] = types.templateElement(
+        { raw: newValue, cooked: newValue },
+        args[0].quasis[args[0].quasis.length - 1].tail,
       );
     }
   }
+
+  return types.callExpression(types.identifier('require'), args);
 };
