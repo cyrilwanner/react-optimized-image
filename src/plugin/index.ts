@@ -3,6 +3,7 @@ import { Visitor, NodePath } from '@babel/traverse';
 import babelPluginSyntaxJsx from 'babel-plugin-syntax-jsx';
 import { getImportedJsxComponent } from './util';
 import transformSvgComponent from './transform/svg';
+import transformImgComponent from './transform/img';
 
 export interface Babel {
   types: typeof BabelTypes;
@@ -23,9 +24,12 @@ export default function ({ types }: Babel): { visitor: Visitor<PluginOptions>; i
           const binding = path.scope.getBinding(path.node.openingElement.name.name);
           const component = getImportedJsxComponent(binding);
 
-          // handle svg component
           if (component === 'Svg') {
+            // handle svg component
             transformSvgComponent(types, path);
+          } else if (component === 'default' || component === 'Img') {
+            // handle img component
+            transformImgComponent(types, path);
           }
         }
       },
