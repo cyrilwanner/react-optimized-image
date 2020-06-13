@@ -13,9 +13,11 @@
   "homepage": "https://github.com/cyrilwanner/react-optimized-image#readme",
   "license": "MIT",
   "scripts": {
+    "prebuild": "rimraf lib",
     "build": "npm run build:components && npm run build:plugin && npm run build:types",
-    "build:components": "babel src/components --out-dir lib/components --delete-dir-on-start --extensions \".ts,.tsx\" --config-file ./.babelrc.components",
-    "build:plugin": "babel src/plugin --out-dir lib/plugin --delete-dir-on-start --extensions \".ts\" --config-file ./.babelrc.plugin",
+    "build:components": "babel src --out-dir lib --extensions \".ts,.tsx\" --config-file ./.babelrc.components",
+    "build:plugin": "babel src/plugin --out-dir lib/plugin --extensions \".ts\" --config-file ./.babelrc.plugin",
+    "build:plugin:watch": "npm run build:plugin -- --watch",
     "build:types": "tsc --emitDeclarationOnly",
     "lint": "tsc --noEmit && eslint . --ext .ts --ext .tsx --ext .js",
     "lint:fix": "npm run lint -- --fix",
@@ -43,6 +45,7 @@
     "jest": "^26.0.1",
     "prettier": "^2.0.5",
     "react": "^16.13.1",
+    "rimraf": "^3.0.2",
     "typescript": "^3.9.5"
   },
   "main": "lib/index.js",

@@ -1,14 +1,13 @@
 {
   "presets": [
     ["@babel/preset-env", {
-      "targets": {
-        "node": 10
-      }
+      "targets": "> 0.25%, not dead, ie 11"
     }],
     "@babel/preset-react",
     "@babel/typescript"
   ],
   "ignore": [
-    "**/*.d.ts"
+    "**/*.d.ts",
+    "./src/plugin/**/*.ts"
   ]
 }
