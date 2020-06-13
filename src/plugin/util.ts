@@ -34,7 +34,11 @@ export const isImport = (path: NodePath): boolean => {
  * @returns {boolean}
  */
 export const isImportedFromPackage = (node: ImportDeclaration, packageName: string): boolean => {
-  return node.source.value === packageName || node.source.value.startsWith(`${packageName}/`);
+  return (
+    node.source.value === packageName ||
+    node.source.value === `${packageName}/lib` ||
+    node.source.value.startsWith(`${packageName}/`)
+  );
 };
 
 /**
@@ -69,10 +73,10 @@ export const isImportedJsxComponent = (binding: Binding | undefined, component: 
   ) {
     const exportName = getExportName(binding.path.node as ImportSpecifier | ImportDefaultSpecifier);
 
-    // handle path specific imports like react-optimized-image/lib/Svg
+    // handle path specific imports like react-optimized-image/lib/components/Svg
     if (exportName === 'default') {
-      if (binding.path.parent.source.value.startsWith('react-optimized-image/lib/')) {
-        return binding.path.parent.source.value.replace('react-optimized-image/lib/', '') === component;
+      if (binding.path.parent.source.value.startsWith('react-optimized-image/lib/components/')) {
+        return binding.path.parent.source.value.replace('react-optimized-image/lib/components/', '') === component;
       }
     }
 
