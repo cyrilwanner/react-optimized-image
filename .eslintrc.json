@@ -13,7 +13,8 @@
   "ignorePatterns": [
     "**/node_modules/**",
     "**/lib/**",
-    "**/*.d.ts"
+    "**/*.d.ts",
+    "**/__fixtures__/**"
   ],
   "settings": {
     "import/resolver": {

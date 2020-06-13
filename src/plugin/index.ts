@@ -1,5 +1,6 @@
 import * as BabelTypes from '@babel/types';
 import { Visitor, NodePath } from '@babel/traverse';
+import babelPluginSyntaxJsx from 'babel-plugin-syntax-jsx';
 import { isImportedJsxComponent } from './util';
 import transformSvgComponent from './transform/svg';
 
@@ -13,8 +14,9 @@ interface PluginOptions {
   };
 }
 
-export default function ({ types }: Babel): { visitor: Visitor<PluginOptions> } {
+export default function ({ types }: Babel): { visitor: Visitor<PluginOptions>; inherits: unknown } {
   return {
+    inherits: babelPluginSyntaxJsx,
     visitor: {
       JSXElement(path) {
         if (path.node.openingElement.name.type === 'JSXIdentifier') {
