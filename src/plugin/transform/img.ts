@@ -1,3 +1,4 @@
+import clone from 'clone';
 import { NodePath } from '@babel/core';
 import { JSXElement, JSXAttribute, JSXOpeningElement, CallExpression, ObjectProperty } from '@babel/types';
 import { Babel } from '..';
@@ -8,7 +9,7 @@ import {
   buildRequireStatement,
   getRequireArguments,
 } from '../util';
-import { ImageConfig } from '../types';
+import { ImageConfig } from '../imageConfig';
 
 /**
  * Build the image configuration based on jsx attribute
@@ -20,12 +21,14 @@ const buildConfig = (path: NodePath<JSXElement>): ImageConfig => {
   // build config
   const config: ImageConfig = {};
 
-  // check if it should get converted to webp
-  const webp = getBooleanAttribute(path, 'webp');
+  // check boolean attributes: webp, inline, url, original
+  ['webp', 'inline', 'url', 'original'].forEach((attr) => {
+    const value = getBooleanAttribute(path, attr);
 
-  if (typeof webp !== 'undefined') {
-    config.webp = webp;
-  }
+    if (typeof value !== 'undefined') {
+      (config as Record<string, unknown>)[attr] = value;
+    }
+  });
 
   // get sizes
   const sizes = getNumberedArrayAttribute(path, 'sizes');
@@ -50,18 +53,20 @@ const buildConfig = (path: NodePath<JSXElement>): ImageConfig => {
  * @param {Babel['types']} types
  * @param {CallExpression['arguments']} requireArgs
  * @param {ImageConfig} config
+ * @param {Record<string, unknown>} globalQuery
  * @returns {JSXAttribute}
  */
 const buildRawSrcAttribute = (
   types: Babel['types'],
   requireArgs: CallExpression['arguments'],
   config: ImageConfig,
+  globalQuery: Record<string, string>,
 ): JSXAttribute => {
   const properties: ObjectProperty[] = [];
 
   ['fallback', ...(config.webp ? ['webp'] : [])].forEach((type) => {
     const typeProperties: ObjectProperty[] = [];
-    const query: Record<string, string> = type === 'webp' ? { webp: '' } : {};
+    const query: Record<string, string> = type === 'webp' ? { ...globalQuery, webp: '' } : { ...globalQuery };
 
     (config.sizes && config.sizes.length > 0 ? config.sizes : ['original']).forEach((size: number | string) => {
       const sizeProperties: ObjectProperty[] = [];
@@ -73,7 +78,10 @@ const buildRawSrcAttribute = (
         };
 
         sizeProperties.push(
-          types.objectProperty(types.numericLiteral(density), buildRequireStatement(types, requireArgs, sizeQuery)),
+          types.objectProperty(
+            types.numericLiteral(density),
+            buildRequireStatement(types, clone(requireArgs), sizeQuery),
+          ),
         );
       });
 
@@ -112,7 +120,24 @@ const transformImgComponent = (types: Babel['types'], path: NodePath<JSXElement>
   }
 
   const config = buildConfig(path);
-  const rawSrc = buildRawSrcAttribute(types, requireArgs, config);
+
+  const query: Record<string, string> = {};
+
+  // add boolean queries
+  ['inline', 'url', 'original'].forEach((attr) => {
+    if ((config as Record<string, unknown>)[attr] === true) {
+      query[attr] = '';
+    }
+  });
+
+  // transfer original src attribute if a new query param needs to be set
+  if (Object.keys(query).length > 0) {
+    (src.get('value') as NodePath).replaceWith(
+      types.jsxExpressionContainer(buildRequireStatement(types, clone(requireArgs), query)),
+    );
+  }
+
+  const rawSrc = buildRawSrcAttribute(types, requireArgs, config, query);
   (path.get('openingElement') as NodePath<JSXOpeningElement>).pushContainer('attributes', rawSrc);
 };
 

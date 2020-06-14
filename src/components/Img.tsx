@@ -12,6 +12,9 @@ export interface ImgProps
   extends Omit<Omit<DetailedHTMLProps<ImgHTMLAttributes<HTMLImageElement>, HTMLImageElement>, 'sizes'>, 'src'> {
   src: ImgSrc;
   webp?: boolean;
+  inline?: boolean;
+  url?: boolean;
+  original?: boolean;
   sizes?: number[];
   densities?: number[];
   breakpoints?: number[];
@@ -69,7 +72,19 @@ const buildSources = (
   });
 };
 
-const Img = ({ src, webp, sizes, densities, breakpoints, style, ...props }: ImgProps): ReactElement | null => {
+/* eslint-disable @typescript-eslint/no-unused-vars */
+const Img = ({
+  src,
+  webp,
+  inline,
+  url,
+  original,
+  sizes,
+  densities,
+  breakpoints,
+  style,
+  ...props
+}: ImgProps): ReactElement | null => {
   const styles: CSSProperties = { ...(style || {}) };
   const { rawSrc, ...imgProps } = props as ImgInnerProps;
 
@@ -84,8 +99,8 @@ const Img = ({ src, webp, sizes, densities, breakpoints, style, ...props }: ImgP
 
   return (
     <picture>
-      {rawSrc.webp && buildSources(rawSrc.webp, breakpoints)}
-      {buildSources(rawSrc.fallback, breakpoints)}
+      {rawSrc.webp && buildSources(rawSrc.webp, breakpoints || sizes)}
+      {buildSources(rawSrc.fallback, breakpoints || sizes)}
       <img src={src.src} {...imgProps} style={styles} />
     </picture>
   );
