@@ -8,18 +8,30 @@ import {
   getNumberedArrayAttribute,
   buildRequireStatement,
   getRequireArguments,
+  getTypeAttribute,
 } from '../util';
-import { ImageConfig } from '../imageConfig';
+import { ImageConfig, getGlobalConfig } from '../imageConfig';
+
+const globalImageConfig = getGlobalConfig();
 
 /**
  * Build the image configuration based on jsx attribute
  *
+ * @param {Babel['types']} types
  * @param {NodePath<JSXElement>} path
  * @returns {ImageConfig}
  */
-const buildConfig = (path: NodePath<JSXElement>): ImageConfig => {
+const buildConfig = (types: Babel['types'], path: NodePath<JSXElement>): ImageConfig => {
   // build config
-  const config: ImageConfig = {};
+  let config: ImageConfig = { ...(globalImageConfig.default || {}) };
+
+  // check if a specific type is set
+  const type = getTypeAttribute(path, Object.keys(globalImageConfig.types || {}));
+
+  // add type configs
+  if (type && globalImageConfig.types && globalImageConfig.types[type]) {
+    config = { ...config, ...globalImageConfig.types[type] };
+  }
 
   // check boolean attributes: webp, inline, url, original
   ['webp', 'inline', 'url', 'original'].forEach((attr) => {
@@ -27,6 +39,12 @@ const buildConfig = (path: NodePath<JSXElement>): ImageConfig => {
 
     if (typeof value !== 'undefined') {
       (config as Record<string, unknown>)[attr] = value;
+    } else if (typeof value === 'undefined' && (config as Record<string, unknown>)[attr] === true) {
+      // add attr from global image config
+      (path.get('openingElement') as NodePath<JSXOpeningElement>).pushContainer(
+        'attributes',
+        types.jsxAttribute(types.jsxIdentifier(attr), null),
+      );
     }
   });
 
@@ -35,6 +53,15 @@ const buildConfig = (path: NodePath<JSXElement>): ImageConfig => {
 
   if (typeof sizes !== 'undefined') {
     config.sizes = sizes;
+  } else if (config.sizes) {
+    // add sizes attr from global image config
+    (path.get('openingElement') as NodePath<JSXOpeningElement>).pushContainer(
+      'attributes',
+      types.jsxAttribute(
+        types.jsxIdentifier('sizes'),
+        types.jsxExpressionContainer(types.arrayExpression(config.sizes.map((size) => types.numericLiteral(size)))),
+      ),
+    );
   }
 
   // get densities
@@ -42,6 +69,33 @@ const buildConfig = (path: NodePath<JSXElement>): ImageConfig => {
 
   if (typeof densities !== 'undefined') {
     config.densities = densities;
+  } else if (config.densities) {
+    // add densities attr from global image config
+    (path.get('openingElement') as NodePath<JSXOpeningElement>).pushContainer(
+      'attributes',
+      types.jsxAttribute(
+        types.jsxIdentifier('densities'),
+        types.jsxExpressionContainer(types.arrayExpression(config.densities.map((size) => types.numericLiteral(size)))),
+      ),
+    );
+  }
+
+  // get breakpoints
+  const breakpoints = getNumberedArrayAttribute(path, 'breakpoints');
+
+  if (typeof breakpoints !== 'undefined') {
+    config.breakpoints = breakpoints;
+  } else if (config.breakpoints) {
+    // add breakpoints attr from global image config
+    (path.get('openingElement') as NodePath<JSXOpeningElement>).pushContainer(
+      'attributes',
+      types.jsxAttribute(
+        types.jsxIdentifier('breakpoints'),
+        types.jsxExpressionContainer(
+          types.arrayExpression(config.breakpoints.map((size) => types.numericLiteral(size))),
+        ),
+      ),
+    );
   }
 
   return config;
@@ -119,7 +173,7 @@ const transformImgComponent = (types: Babel['types'], path: NodePath<JSXElement>
     return;
   }
 
-  const config = buildConfig(path);
+  const config = buildConfig(types, path);
 
   const query: Record<string, string> = {};
 
