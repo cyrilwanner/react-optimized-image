@@ -11,6 +11,7 @@ export interface ImgSrc {
 export interface ImgProps
   extends Omit<Omit<DetailedHTMLProps<ImgHTMLAttributes<HTMLImageElement>, HTMLImageElement>, 'sizes'>, 'src'> {
   src: ImgSrc;
+  type?: string;
   webp?: boolean;
   inline?: boolean;
   url?: boolean;
@@ -72,9 +73,34 @@ const buildSources = (
   });
 };
 
+const findFallbackImage = (src: ImgSrc, rawSrc: ImgInnerProps['rawSrc']): ImgSrc => {
+  let fallbackImage = src;
+
+  if (rawSrc.fallback) {
+    const biggestSize = Object.keys(rawSrc.fallback)
+      .map((key) => parseInt(key, 10))
+      .sort((a, b) => b - a)
+      .find(() => true);
+
+    if (biggestSize) {
+      const lowestDensity = Object.keys(rawSrc.fallback[biggestSize])
+        .map((key) => parseInt(key, 10))
+        .sort((a, b) => a - b)
+        .find(() => true);
+
+      if (lowestDensity) {
+        fallbackImage = rawSrc.fallback[biggestSize][lowestDensity];
+      }
+    }
+  }
+
+  return fallbackImage;
+};
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 const Img = ({
   src,
+  type,
   webp,
   inline,
   url,
@@ -88,20 +114,23 @@ const Img = ({
   const styles: CSSProperties = { ...(style || {}) };
   const { rawSrc, ...imgProps } = props as ImgInnerProps;
 
+  // find fallback image
+  const fallbackImage = findFallbackImage(src, rawSrc);
+
   // return normal image tag if only 1 version is needed
   if (
     !rawSrc.webp &&
     Object.keys(rawSrc.fallback).length === 1 &&
     Object.keys(rawSrc.fallback[(Object.keys(rawSrc.fallback)[0] as unknown) as number]).length === 1
   ) {
-    return <img src={src.src} {...imgProps} style={styles} />;
+    return <img src={fallbackImage.toString()} {...imgProps} style={styles} />;
   }
 
   return (
     <picture>
       {rawSrc.webp && buildSources(rawSrc.webp, breakpoints || sizes)}
       {buildSources(rawSrc.fallback, breakpoints || sizes)}
-      <img src={src.src} {...imgProps} style={styles} />
+      <img src={fallbackImage.toString()} {...imgProps} style={styles} />
     </picture>
   );
 };
