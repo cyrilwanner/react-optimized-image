@@ -61,28 +61,27 @@ const buildRawSrcAttribute = (
 
   ['fallback', ...(config.webp ? ['webp'] : [])].forEach((type) => {
     const typeProperties: ObjectProperty[] = [];
+    const query: Record<string, string> = type === 'webp' ? { webp: '' } : {};
 
-    (config.densities || [1]).forEach((density) => {
-      const densityProperties: ObjectProperty[] = [];
-      const query: Record<string, string> = type === 'webp' ? { webp: '' } : {};
+    (config.sizes && config.sizes.length > 0 ? config.sizes : ['original']).forEach((size: number | string) => {
+      const sizeProperties: ObjectProperty[] = [];
 
-      if (!config.sizes || config.sizes.length === 0) {
-        densityProperties.push(
-          types.objectProperty(types.identifier('original'), buildRequireStatement(types, requireArgs, query)),
+      (config.densities || [1]).forEach((density) => {
+        const sizeQuery: Record<string, string> = {
+          ...query,
+          ...(typeof size === 'number' ? { width: `${size * density}` } : {}),
+        };
+
+        sizeProperties.push(
+          types.objectProperty(types.numericLiteral(density), buildRequireStatement(types, requireArgs, sizeQuery)),
         );
-      } else {
-        config.sizes.forEach((size) => {
-          densityProperties.push(
-            types.objectProperty(
-              types.numericLiteral(size),
-              buildRequireStatement(types, requireArgs, { ...query, width: `${size * density}` }),
-            ),
-          );
-        });
-      }
+      });
 
       typeProperties.push(
-        types.objectProperty(types.numericLiteral(density), types.objectExpression(densityProperties)),
+        types.objectProperty(
+          typeof size === 'string' ? types.identifier(size) : types.numericLiteral(size),
+          types.objectExpression(sizeProperties),
+        ),
       );
     });
 

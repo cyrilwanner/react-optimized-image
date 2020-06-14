@@ -31,6 +31,8 @@
     "import/prefer-default-export": "off",
     "@typescript-eslint/no-use-before-define": "off",
     "react/jsx-filename-extension": ["error", { "extensions": [".tsx"] }],
+    "react/jsx-props-no-spreading": "off",
+    "jsx-a11y/alt-text": "off",
     "consistent-return": "off"
   }
 }

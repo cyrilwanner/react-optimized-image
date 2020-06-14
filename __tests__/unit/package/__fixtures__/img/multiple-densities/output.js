@@ -9,13 +9,13 @@ export default () => (
       densities={[1, 2]}
       rawSrc={{
         fallback: {
-          1: {
-            400: require('./image.png?width=400'),
-            800: require('./image.png?width=800'),
+          400: {
+            1: require('./image.png?width=400'),
+            2: require('./image.png?width=800'),
           },
-          2: {
-            400: require('./image.png?width=800'),
-            800: require('./image.png?width=1600'),
+          800: {
+            1: require('./image.png?width=800'),
+            2: require('./image.png?width=1600'),
           },
         },
       }}

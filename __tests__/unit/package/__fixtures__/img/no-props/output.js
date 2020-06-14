@@ -7,8 +7,8 @@ export default () => (
       src={Image}
       rawSrc={{
         fallback: {
-          1: {
-            original: require('./image.png'),
+          original: {
+            1: require('./image.png'),
           },
         },
       }}

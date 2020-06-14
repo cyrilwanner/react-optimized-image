@@ -8,13 +8,13 @@ export default () => (
       webp
       rawSrc={{
         fallback: {
-          1: {
-            original: require('./image.png'),
+          original: {
+            1: require('./image.png'),
           },
         },
         webp: {
-          1: {
-            original: require('./image.png?webp'),
+          original: {
+            1: require('./image.png?webp'),
           },
         },
       }}
