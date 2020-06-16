@@ -169,6 +169,15 @@ export const getImportedJsxComponent = (binding: Binding | undefined): string | 
         return simplifyExportName(exportName, moduleName);
       }
     }
+
+    // handle recursiveness
+    if (
+      binding.path.node.type === 'VariableDeclarator' &&
+      binding.path.node.init &&
+      binding.path.node.init.type === 'Identifier'
+    ) {
+      return getImportedJsxComponent(binding.scope.getBinding(binding.path.node.init.name));
+    }
   }
 
   return undefined;
