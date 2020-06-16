@@ -119,68 +119,127 @@ export const resolveRequireExportName = (node: VariableDeclarator, binding: Bind
 };
 
 /**
+ * Checks if an import name belongs to the given module
+ *
+ * @param {string} importName
+ * @param {string} module
+ * @returns {boolean}
+ */
+export const isModule = (importName: string, module: string): boolean => {
+  return importName === module || importName.startsWith(`${module}/`);
+};
+
+/**
+ * Resolves styled components import
+ *
+ * @param {CallExpression} node
+ * @param {Binding} binding
+ * @returns {{ exportName?: string; moduleName?: string } | undefined}
+ */
+export const resolveStyledComponentsImport = (
+  node: CallExpression,
+  binding: Binding,
+): { exportName?: string; moduleName?: string } | undefined => {
+  if (node.callee.type !== 'Identifier') {
+    return;
+  }
+
+  const resolved = resolveImport(binding.scope.getBinding(node.callee.name)); // eslint-disable-line no-use-before-define
+
+  if (
+    resolved &&
+    resolved.moduleName &&
+    (isModule(resolved.moduleName, 'styled-components') || isModule(resolved.moduleName, '@emotion/styled'))
+  ) {
+    if (node.arguments.length > 0 && node.arguments[0].type === 'Identifier') {
+      return resolveImport(binding.scope.getBinding(node.arguments[0].name)); // eslint-disable-line no-use-before-define
+    }
+  }
+};
+
+/**
+ * Resolves an import or require statement
+ *
+ * @param {Binding | undefined} binding
+ * @returns {{ exportName?: string; moduleName?: string } | undefined}
+ */
+export const resolveImport = (
+  binding: Binding | undefined,
+): { exportName?: string; moduleName?: string } | undefined => {
+  // handle import statements
+  if (
+    binding &&
+    binding.kind === 'module' &&
+    isImport(binding.path) &&
+    binding.path.parent.type === 'ImportDeclaration'
+  ) {
+    return {
+      moduleName: binding.path.parent.source.value,
+      exportName: getExportName(binding.path.node as ImportSpecifier | ImportDefaultSpecifier),
+    };
+  }
+
+  // handle require statements and other libraries like styled-components
+  if (binding && binding.kind !== 'module' && binding.path.node.type === 'VariableDeclarator') {
+    const { node } = binding.path;
+
+    // check for require('react-optimized-image').default calls
+    if (node.init && node.init.type === 'MemberExpression' && node.init.object.type === 'CallExpression') {
+      return {
+        moduleName: resolveRequireModule(node.init.object),
+        exportName: resolveRequireExportName(node, binding),
+      };
+    }
+
+    // check for `const { Svg } = require('react-optimized-image')` or `styled(Img)({})  calls
+    if (node.init && node.init.type === 'CallExpression') {
+      // handle styled-components
+      if (node.init.callee.type === 'CallExpression' && node.init.callee.callee.type === 'Identifier') {
+        return resolveStyledComponentsImport(node.init.callee, binding);
+      }
+
+      return {
+        moduleName: resolveRequireModule(node.init),
+        exportName: resolveRequireExportName(node, binding),
+      };
+    }
+
+    // handle styled-components (styled(Img)`...`)
+    if (
+      node.init &&
+      node.init.type === 'TaggedTemplateExpression' &&
+      node.init.tag.type === 'CallExpression' &&
+      node.init.tag.callee.type === 'Identifier'
+    ) {
+      return resolveStyledComponentsImport(node.init.tag, binding);
+    }
+
+    // handle recursiveness
+    if (node.init && node.init.type === 'Identifier') {
+      return resolveImport(binding.scope.getBinding(node.init.name));
+    }
+  }
+
+  return undefined;
+};
+
+/**
  * Gets the JSX component name belonging to the import statement
  *
  * @param {Binding} [binding]
  * @returns {string}
  */
 export const getImportedJsxComponent = (binding: Binding | undefined): string | undefined => {
-  // handle import statements
+  const resolved = resolveImport(binding);
+
   if (
-    binding &&
-    binding.kind === 'module' &&
-    isImport(binding.path) &&
-    binding.path.parent.type === 'ImportDeclaration' &&
-    isImportedFromPackage(binding.path.parent as ImportDeclaration, 'react-optimized-image')
+    resolved &&
+    resolved.exportName &&
+    resolved.moduleName &&
+    isModule(resolved.moduleName, 'react-optimized-image')
   ) {
-    const moduleName = binding.path.parent.source.value;
-    const exportName = getExportName(binding.path.node as ImportSpecifier | ImportDefaultSpecifier);
-
-    return simplifyExportName(exportName, moduleName);
+    return simplifyExportName(resolved.exportName, resolved.moduleName);
   }
-
-  // handle require statements and other libraries like styled-components
-  if (binding && binding.kind !== 'module') {
-    // check for require('react-optimized-image').default calls
-    if (
-      binding.path.node.type === 'VariableDeclarator' &&
-      binding.path.node.init &&
-      binding.path.node.init.type === 'MemberExpression' &&
-      binding.path.node.init.object.type === 'CallExpression'
-    ) {
-      const moduleName = resolveRequireModule(binding.path.node.init.object);
-      const exportName = resolveRequireExportName(binding.path.node, binding);
-
-      if (moduleName && exportName) {
-        return simplifyExportName(exportName, moduleName);
-      }
-    }
-
-    // check for const { Svg } = require('react-optimized-image') calls
-    if (
-      binding.path.node.type === 'VariableDeclarator' &&
-      binding.path.node.init &&
-      binding.path.node.init.type === 'CallExpression'
-    ) {
-      const moduleName = resolveRequireModule(binding.path.node.init);
-      const exportName = resolveRequireExportName(binding.path.node, binding);
-
-      if (moduleName && exportName) {
-        return simplifyExportName(exportName, moduleName);
-      }
-    }
-
-    // handle recursiveness
-    if (
-      binding.path.node.type === 'VariableDeclarator' &&
-      binding.path.node.init &&
-      binding.path.node.init.type === 'Identifier'
-    ) {
-      return getImportedJsxComponent(binding.scope.getBinding(binding.path.node.init.name));
-    }
-  }
-
-  return undefined;
 };
 
 /**
