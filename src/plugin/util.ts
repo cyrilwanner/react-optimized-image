@@ -8,6 +8,8 @@ import {
   JSXExpressionContainer,
   CallExpression,
   ArrayExpression,
+  VariableDeclarator,
+  ObjectProperty,
 } from '@babel/types';
 import { NodePath } from '@babel/core';
 import { Binding } from '@babel/traverse';
@@ -53,6 +55,70 @@ export const getExportName = (node: ImportSpecifier | ImportDefaultSpecifier): s
 };
 
 /**
+ * Resolves the correct export name from an import
+ *
+ * @param {string} exportName
+ * @param {string} importPath
+ * @returns {string}
+ */
+export const simplifyExportName = (exportName: string, importPath: string): string => {
+  // handle path specific imports like react-optimized-image/lib/components/Svg
+  if (exportName === 'default') {
+    if (importPath.startsWith('react-optimized-image/lib/components/')) {
+      return importPath.replace('react-optimized-image/lib/components/', '');
+    }
+  }
+
+  return exportName;
+};
+
+/**
+ * Gets the module name of a require call
+ *
+ * @param {CallExpression} node
+ * @returns {string | undefined}
+ */
+export const resolveRequireModule = (node: CallExpression): string | undefined => {
+  if (
+    node.callee.type === 'Identifier' &&
+    node.callee.name === 'require' &&
+    node.arguments.length > 0 &&
+    node.arguments[0].type === 'StringLiteral'
+  ) {
+    return node.arguments[0].value;
+  }
+};
+
+/**
+ * Get the imported export name
+ *
+ * @param {VariableDeclarator} node
+ * @param {Binding} binding
+ * @returns {string | undefined}
+ */
+export const resolveRequireExportName = (node: VariableDeclarator, binding: Binding): string | undefined => {
+  // check for const { Svg } = require('react-optimized-image') calls
+  if (node.id.type === 'ObjectPattern') {
+    return (node.id.properties.find(
+      (property) =>
+        property.type === 'ObjectProperty' &&
+        property.value.type === 'Identifier' &&
+        property.value.name === binding.identifier.name,
+    ) as ObjectProperty).key.name;
+  }
+
+  // check for require('react-optimized-image').default calls
+  if (
+    node.init &&
+    node.init.type === 'MemberExpression' &&
+    node.init.object.type === 'CallExpression' &&
+    node.init.property.type === 'Identifier'
+  ) {
+    return node.init.property.name;
+  }
+};
+
+/**
  * Gets the JSX component name belonging to the import statement
  *
  * @param {Binding} [binding]
@@ -67,19 +133,43 @@ export const getImportedJsxComponent = (binding: Binding | undefined): string | 
     binding.path.parent.type === 'ImportDeclaration' &&
     isImportedFromPackage(binding.path.parent as ImportDeclaration, 'react-optimized-image')
   ) {
+    const moduleName = binding.path.parent.source.value;
     const exportName = getExportName(binding.path.node as ImportSpecifier | ImportDefaultSpecifier);
 
-    // handle path specific imports like react-optimized-image/lib/components/Svg
-    if (exportName === 'default') {
-      if (binding.path.parent.source.value.startsWith('react-optimized-image/lib/components/')) {
-        return binding.path.parent.source.value.replace('react-optimized-image/lib/components/', '');
+    return simplifyExportName(exportName, moduleName);
+  }
+
+  // handle require statements and other libraries like styled-components
+  if (binding && binding.kind !== 'module') {
+    // check for require('react-optimized-image').default calls
+    if (
+      binding.path.node.type === 'VariableDeclarator' &&
+      binding.path.node.init &&
+      binding.path.node.init.type === 'MemberExpression' &&
+      binding.path.node.init.object.type === 'CallExpression'
+    ) {
+      const moduleName = resolveRequireModule(binding.path.node.init.object);
+      const exportName = resolveRequireExportName(binding.path.node, binding);
+
+      if (moduleName && exportName) {
+        return simplifyExportName(exportName, moduleName);
       }
     }
 
-    return exportName;
-  }
+    // check for const { Svg } = require('react-optimized-image') calls
+    if (
+      binding.path.node.type === 'VariableDeclarator' &&
+      binding.path.node.init &&
+      binding.path.node.init.type === 'CallExpression'
+    ) {
+      const moduleName = resolveRequireModule(binding.path.node.init);
+      const exportName = resolveRequireExportName(binding.path.node, binding);
 
-  // todo: also handle require statements at the top of the file instead of imports
+      if (moduleName && exportName) {
+        return simplifyExportName(exportName, moduleName);
+      }
+    }
+  }
 
   return undefined;
 };

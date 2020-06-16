@@ -114,6 +114,12 @@ const Img = ({
   const styles: CSSProperties = { ...(style || {}) };
   const { rawSrc, ...imgProps } = props as ImgInnerProps;
 
+  if (!rawSrc) {
+    throw new Error(
+      "Babel plugin 'react-optimized-image/plugin' not installed or this component could not be recognized by it.",
+    );
+  }
+
   // find fallback image
   const fallbackImage = findFallbackImage(src, rawSrc);
 
