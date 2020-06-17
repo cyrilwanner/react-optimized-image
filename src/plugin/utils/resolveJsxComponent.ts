@@ -1,6 +1,14 @@
 import { CallExpression, ImportSpecifier, ImportDefaultSpecifier, JSXElement } from '@babel/types';
 import { Binding, NodePath } from '@babel/traverse';
-import { resolveRequireModule, resolveRequireExportName, isImport, getExportName } from './traverse';
+import {
+  resolveRequireModule,
+  resolveRequireExportName,
+  isImport,
+  getExportName,
+  getRelevantRequireString,
+} from './traverse';
+import { getAttribute } from './jsx';
+import { Babel } from '..';
 
 /**
  * Resolves the correct export name from an import
@@ -148,8 +156,22 @@ const getImportedJsxComponent = (binding: Binding | undefined): string | undefin
  * @param {NodePath<JSXElement>} path
  * @returns {string}
  */
-const resolveJsxComponent = (path: NodePath<JSXElement>): string | undefined => {
+const resolveJsxComponent = (types: Babel['types'], path: NodePath<JSXElement>): string | undefined => {
   if (path.node.openingElement.name.type === 'JSXIdentifier') {
+    // check if it is a possible react-optimized-image component before proceeding further
+    const srcAttribute = getAttribute(path, 'src');
+
+    if (!srcAttribute) {
+      return;
+    }
+
+    const requireName = getRelevantRequireString(types, srcAttribute);
+
+    if (!requireName || !requireName.match(/\.(jpe?g|png|svg|gif|webp)($|\?)/gi)) {
+      return;
+    }
+
+    // it is now likely to be a react-optimized-image component, so start resolving
     const binding = path.scope.getBinding(path.node.openingElement.name.name);
     const component = getImportedJsxComponent(binding);
 

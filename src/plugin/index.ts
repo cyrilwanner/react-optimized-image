@@ -1,7 +1,7 @@
 import * as BabelTypes from '@babel/types';
 import { Visitor, NodePath } from '@babel/traverse';
 import babelPluginSyntaxJsx from 'babel-plugin-syntax-jsx';
-import resolveJsxComponent, { getImportedJsxComponent } from './utils/resolveJsxComponent';
+import resolveJsxComponent from './utils/resolveJsxComponent';
 import transformSvgComponent from './transform/svg';
 import transformImgComponent from './transform/img';
 
@@ -20,7 +20,7 @@ export default function ({ types }: Babel): { visitor: Visitor<PluginOptions>; i
     inherits: babelPluginSyntaxJsx,
     visitor: {
       JSXElement(path) {
-        const component = resolveJsxComponent(path);
+        const component = resolveJsxComponent(types, path);
 
         if (component === 'Svg') {
           // handle svg component

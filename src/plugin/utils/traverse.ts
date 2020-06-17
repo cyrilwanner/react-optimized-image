@@ -95,6 +95,33 @@ export const getRequireArguments = (
 };
 
 /**
+ * Returns the relevant string of a require or import statement
+ *
+ * @param {Babel['types]} types
+ * @param {NodePath<JSXAttribute>} path
+ * @returns {string}
+ */
+export const getRelevantRequireString = (types: Babel['types'], path: NodePath<JSXAttribute>): string | undefined => {
+  const args = getRequireArguments(types, path);
+  if (args && args.length > 0) {
+    // stringle string
+    if (args[0].type === 'StringLiteral') {
+      return args[0].value;
+    }
+
+    // concatenated string
+    if (args[0].type === 'BinaryExpression' && args[0].right.type === 'StringLiteral') {
+      return args[0].right.value;
+    }
+
+    // template literal
+    if (args[0].type === 'TemplateLiteral' && args[0].quasis.length > 0) {
+      return args[0].quasis[args[0].quasis.length - 1].value.raw;
+    }
+  }
+};
+
+/**
  * Get the imported export name
  *
  * @param {VariableDeclarator} node
