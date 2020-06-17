@@ -2,14 +2,9 @@ import clone from 'clone';
 import { NodePath } from '@babel/core';
 import { JSXElement, JSXAttribute, JSXOpeningElement, CallExpression, ObjectProperty } from '@babel/types';
 import { Babel } from '..';
-import {
-  getAttribute,
-  getBooleanAttribute,
-  getNumberedArrayAttribute,
-  buildRequireStatement,
-  getRequireArguments,
-  getTypeAttribute,
-} from '../util';
+import { getAttribute, getBooleanAttribute, getNumberedArrayAttribute, getTypeAttribute } from '../utils/jsx';
+import { buildRequireStatement } from '../utils/transform';
+import { getRequireArguments } from '../utils/traverse';
 import { ImageConfig, getGlobalConfig } from '../imageConfig';
 
 const globalImageConfig = getGlobalConfig();

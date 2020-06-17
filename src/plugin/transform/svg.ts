@@ -1,7 +1,9 @@
 import { NodePath } from '@babel/core';
 import { JSXElement } from '@babel/types';
 import { Babel } from '..';
-import { getAttribute, getRequireArguments, buildRequireStatement } from '../util';
+import { getRequireArguments } from '../utils/traverse';
+import { getAttribute } from '../utils/jsx';
+import { buildRequireStatement } from '../utils/transform';
 
 /**
  * Adds ?include query param to the src attribute of the Svg component
