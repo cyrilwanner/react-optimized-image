@@ -1,4 +1,13 @@
-import { CallExpression, ImportSpecifier, ImportDefaultSpecifier, JSXElement } from '@babel/types';
+import {
+  CallExpression,
+  ImportSpecifier,
+  ImportDefaultSpecifier,
+  JSXElement,
+  JSXMemberExpression,
+  MemberExpression,
+  ObjectProperty,
+  ObjectExpression,
+} from '@babel/types';
 import { Binding, NodePath } from '@babel/traverse';
 import {
   resolveRequireModule,
@@ -151,29 +160,201 @@ const getImportedJsxComponent = (binding: Binding | undefined): string | undefin
 };
 
 /**
+ * Resolves a JSXMemberExpression recursively into binding names
+ *
+ * @param {JSXMemberExpression} node
+ * @returns {string}
+ */
+const resolveJsxMemberExpression = (node: JSXMemberExpression): string[] => {
+  let bindings: string[] = [];
+
+  if (node.object.type === 'JSXMemberExpression') {
+    bindings = [...resolveJsxMemberExpression(node.object)];
+  } else if (node.object.type === 'JSXIdentifier') {
+    bindings.push(node.object.name);
+  }
+
+  bindings.push(node.property.name);
+
+  return bindings;
+};
+
+/**
+ * Resolves a MemberExpression recursively into binding names
+ *
+ * @param {MemberExpression} node
+ * @returns {string}
+ */
+const resolveMemberExpression = (node: MemberExpression): string[] => {
+  let bindings: string[] = [];
+
+  if (node.object.type === 'MemberExpression') {
+    bindings = [...resolveMemberExpression(node.object)];
+  } else if (node.object.type === 'Identifier') {
+    bindings.push(node.object.name);
+  }
+
+  bindings.push(node.property.name);
+
+  return bindings;
+};
+
+/**
+ * Resolves a ObjectProperty recursively into binding names
+ *
+ * @param {NodePath<ObjectExpression>} path
+ * @param {ObjectProperty} property
+ * @returns {string}
+ */
+const resolveObjectProperty = (path: NodePath<ObjectExpression>, property: ObjectProperty): string[] => {
+  let bindings: string[] = [];
+  const parent = path.findParent(() => true);
+
+  if (parent.node.type === 'ObjectProperty') {
+    bindings = [...resolveObjectProperty(parent.findParent(() => true) as NodePath<ObjectExpression>, parent.node)];
+  } else if (parent.node.type === 'VariableDeclarator' && parent.node.id.type === 'Identifier') {
+    bindings.push(parent.node.id.name);
+  }
+
+  bindings.push(property.key.name);
+
+  return bindings;
+};
+
+/**
+ * Checks if two array equal
+ *
+ * @param {any[]} arr1
+ * @param {any[]} arr2
+ * @returns {boolean}
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const arraysMatch = (arr1: any[], arr2: any[]): boolean => {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+
+  for (let i = 0; arr1.length < i; i += 1) {
+    if (arr1[i] !== arr2[i]) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+/**
+ * Resolves an object into a binding
+ *
+ * @param {Babel['types']} types
+ * @param {NodePath<JSXElement>} path
+ * @param {string[]} bindings
+ */
+const resolveObject = (types: Babel['types'], path: NodePath<JSXElement>, bindings: string[]): Binding | undefined => {
+  if (bindings.length < 2) {
+    return;
+  }
+
+  const variableName = bindings[bindings.length - 1];
+  const object = path.scope.getBinding(bindings[0]);
+  if (!object) {
+    return;
+  }
+
+  const program = path.findParent((node) => node.isProgram());
+  let declarationPath: any = null; // eslint-disable-line
+  let initializer;
+
+  // search for object declaration
+  program.traverse({
+    // styles.StyledImg = ...
+    MemberExpression(exPath: NodePath<MemberExpression>) {
+      if (exPath.node.property && exPath.node.property.name === variableName) {
+        const exBindings = resolveMemberExpression(exPath.node);
+
+        if (arraysMatch(bindings, exBindings) && exPath.parent.type === 'AssignmentExpression') {
+          declarationPath = exPath;
+          initializer = exPath.parent.right;
+          exPath.stop();
+        }
+      }
+    },
+
+    // const styles = { StyledImg: ... }
+    ObjectProperty(opPath: NodePath<ObjectProperty>) {
+      if (opPath.node.key && opPath.node.key.type === 'Identifier' && opPath.node.key.name === variableName) {
+        const exBindings = resolveObjectProperty(
+          opPath.findParent(() => true) as NodePath<ObjectExpression>,
+          opPath.node,
+        );
+
+        if (arraysMatch(bindings, exBindings)) {
+          declarationPath = opPath;
+          initializer = opPath.node.value;
+          opPath.stop();
+        }
+      }
+    },
+  });
+
+  if (!declarationPath) {
+    return;
+  }
+
+  declarationPath = declarationPath as NodePath<MemberExpression>;
+
+  // mock a binding
+  const binding: Partial<Binding> = {
+    kind: 'const',
+    scope: declarationPath.scope,
+    identifier: types.identifier(variableName),
+    path: {
+      ...(declarationPath as any), // eslint-disable-line
+      node: types.variableDeclarator(
+        types.objectPattern([types.objectProperty(types.identifier(variableName), types.identifier(variableName))]),
+        initializer,
+      ),
+    },
+  };
+
+  return binding as Binding;
+};
+
+/**
  * Resolves an react-optimized-image JSX component
  *
  * @param {NodePath<JSXElement>} path
  * @returns {string}
  */
 const resolveJsxComponent = (types: Babel['types'], path: NodePath<JSXElement>): string | undefined => {
+  // check if it is a possible react-optimized-image component before proceeding further
+  const srcAttribute = getAttribute(path, 'src');
+
+  if (!srcAttribute) {
+    return;
+  }
+
+  const requireName = getRelevantRequireString(types, srcAttribute);
+
+  if (!requireName || !requireName.match(/\.(jpe?g|png|svg|gif|webp)($|\?)/gi)) {
+    return;
+  }
+
+  // it is now likely to be a react-optimized-image component, so start resolving
+
+  // check for a normal opening element (<Img ...)
   if (path.node.openingElement.name.type === 'JSXIdentifier') {
-    // check if it is a possible react-optimized-image component before proceeding further
-    const srcAttribute = getAttribute(path, 'src');
-
-    if (!srcAttribute) {
-      return;
-    }
-
-    const requireName = getRelevantRequireString(types, srcAttribute);
-
-    if (!requireName || !requireName.match(/\.(jpe?g|png|svg|gif|webp)($|\?)/gi)) {
-      return;
-    }
-
-    // it is now likely to be a react-optimized-image component, so start resolving
     const binding = path.scope.getBinding(path.node.openingElement.name.name);
     const component = getImportedJsxComponent(binding);
+
+    return component;
+  }
+
+  // check for an object opening element (<styles.Img ...)
+  if (path.node.openingElement.name.type === 'JSXMemberExpression') {
+    const objectBindings = resolveJsxMemberExpression(path.node.openingElement.name);
+    const resolvedBinding = resolveObject(types, path, objectBindings);
+    const component = getImportedJsxComponent(resolvedBinding);
 
     return component;
   }
