@@ -55,6 +55,8 @@
   },
   "dependencies": {
     "app-root-path": "^3.0.0",
+    "babel-explode-module": "^3.0.0",
+    "babel-file-loader": "^2.0.0",
     "babel-plugin-syntax-jsx": "^6.18.0",
     "clone": "^2.1.2"
   },

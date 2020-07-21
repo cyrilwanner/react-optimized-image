@@ -9,6 +9,8 @@ import {
   ObjectExpression,
 } from '@babel/types';
 import { Binding, NodePath } from '@babel/traverse';
+import { resolveFilePathSync, loadFileSync } from 'babel-file-loader';
+import { explodeModule } from 'babel-explode-module';
 import {
   resolveRequireModule,
   resolveRequireExportName,
@@ -141,6 +143,37 @@ const resolveImport = (binding: Binding | undefined): { exportName?: string; mod
 };
 
 /**
+ * Resolves a local import
+ *
+ * @param {Binding | undefined} binding
+ * @param {string} moduleName
+ * @param {string} exportName
+ * @returns {{ exportName?: string; moduleName?: string } | undefined}
+ */
+const resolveLocalImportBinding = (binding: Binding, moduleName: string, exportName: string): Binding | undefined => {
+  if (binding.path.hub.file.opts.filename) {
+    // resolve and parse file
+    const filePath = resolveFilePathSync(binding.path, moduleName);
+
+    if (!filePath) {
+      return undefined;
+    }
+
+    const parsedFile = loadFileSync(filePath, binding.path.hub.file.opts.parserOpts);
+    const exploded = explodeModule(parsedFile.path.parent);
+    const exportStatement = exploded.exports.find((e: { external: string }) => e.external === exportName);
+
+    if (!exportStatement) {
+      return undefined;
+    }
+
+    return parsedFile.scope.getBinding(exportStatement.local);
+  }
+
+  return undefined;
+};
+
+/**
  * Gets the JSX component name belonging to the import statement
  *
  * @param {Binding} [binding]
@@ -148,6 +181,18 @@ const resolveImport = (binding: Binding | undefined): { exportName?: string; mod
  */
 const getImportedJsxComponent = (binding: Binding | undefined): string | undefined => {
   const resolved = resolveImport(binding);
+
+  // follow local imports
+  if (
+    resolved &&
+    resolved.moduleName &&
+    (resolved.moduleName.startsWith('./') || resolved.moduleName.startsWith('../')) &&
+    resolved.exportName &&
+    binding
+  ) {
+    const resolvedBinding = resolveLocalImportBinding(binding, resolved.moduleName, resolved.exportName);
+    return getImportedJsxComponent(resolvedBinding);
+  }
 
   if (
     resolved &&
