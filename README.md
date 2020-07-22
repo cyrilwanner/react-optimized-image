@@ -167,7 +167,7 @@ export default () => (
 
 ## Global image config
 
-This file contains default image optimization options and is located in the **root** of your project.
+The `images.config.js` file contains default image optimization options and is located in the **root** of your project.
 
 Available options:
 | Option | Type | Description |
@@ -178,6 +178,8 @@ Available options:
 #### Example
 
 ```javascript
+// images.config.js
+
 module.exports = {
   default: {
     webp: true,
