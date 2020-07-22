@@ -117,6 +117,15 @@ const resolveImport = (binding: Binding | undefined): { exportName?: string; mod
         return resolveStyledComponentsImport(node.init.callee, binding);
       }
 
+      // handle transpiled styled-components
+      if (
+        node.init.callee.type === 'CallExpression' &&
+        node.init.callee.callee.type === 'MemberExpression' &&
+        node.init.callee.callee.object.type === 'CallExpression'
+      ) {
+        return resolveStyledComponentsImport(node.init.callee.callee.object, binding);
+      }
+
       return {
         moduleName: resolveRequireModule(node.init),
         exportName: resolveRequireExportName(node, binding),
