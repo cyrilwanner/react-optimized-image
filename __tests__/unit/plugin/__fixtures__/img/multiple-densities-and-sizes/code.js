@@ -4,6 +4,6 @@ import Image from './image.png';
 
 export default () => (
   <div>
-    <Img src={Image} sizes={[400]} densities={[1, 2]} />
+    <Img src={Image} sizes={[400, 800]} densities={[1, 2]} />
   </div>
 );

@@ -125,7 +125,7 @@ const buildRawSrcAttribute = (
         if (
           typeof query.url === 'undefined' &&
           typeof query.inline === 'undefined' &&
-          ((type === 'fallback' && config.webp) || allSizes.length > 1)
+          ((type === 'fallback' && config.webp) || allSizes.length > 1 || (config.densities || [1]).length > 1)
         ) {
           query.url = '';
         }
