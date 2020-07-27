@@ -390,7 +390,8 @@ const resolveJsxComponent = (types: Babel['types'], path: NodePath<JSXElement>):
 
   const requireName = getRelevantRequireString(types, srcAttribute);
 
-  if (!requireName || !requireName.match(/\.(jpe?g|png|svg|gif|webp)($|\?)/gi)) {
+  // check if the imported src is not an image in case an extension is present
+  if ((!requireName || !requireName.match(/\.(jpe?g|png|svg|gif|webp)($|\?)/gi)) && requireName !== '') {
     return;
   }
 
