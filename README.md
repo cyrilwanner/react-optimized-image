@@ -1,10 +1,10 @@
 # react-optimized-image [![npm version](https://badgen.net/npm/v/react-optimized-image)](https://www.npmjs.com/package/react-optimized-image) [![license](https://badgen.net/github/license/cyrilwanner/react-optimized-image)](https://github.com/cyrilwanner/react-optimized-image/blob/master/LICENSE) [![downloads](https://badgen.net/npm/dt/react-optimized-image)](https://www.npmjs.com/package/react-optimized-image)
 
 Features:
-- **Optimize** images on the fly using WebAssembly (runs in every environment)
+- **Optimize** images using WebAssembly (runs in every environment)
 - **React components** for different use-cases (responsive images, WebP conversion, lazy loading placeholders, image manipulation, ...)
 - **Build cache for images** for faster builds
-- **Convert to WebP** on the fly
+- **Convert to WebP** automatically during a webpack build
 - **Inline** small images automatically
 - ...
 

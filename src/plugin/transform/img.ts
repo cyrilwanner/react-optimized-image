@@ -117,30 +117,41 @@ const buildRawSrcAttribute = (
     const typeProperties: ObjectProperty[] = [];
     const query: Record<string, string> = type === 'webp' ? { ...globalQuery, webp: '' } : { ...globalQuery };
 
-    (config.sizes && config.sizes.length > 0 ? config.sizes : ['original']).forEach((size: number | string) => {
-      const sizeProperties: ObjectProperty[] = [];
+    (config.sizes && config.sizes.length > 0 ? config.sizes : ['original']).forEach(
+      (size: number | string, index: number, allSizes: Array<number | string>) => {
+        const sizeProperties: ObjectProperty[] = [];
 
-      (config.densities || [1]).forEach((density) => {
-        const sizeQuery: Record<string, string> = {
-          ...query,
-          ...(typeof size === 'number' ? { width: `${size * density}` } : {}),
-        };
+        // only inline image if there is 1 size and no fallback
+        if (
+          typeof query.url === 'undefined' &&
+          typeof query.inline === 'undefined' &&
+          ((type === 'fallback' && config.webp) || allSizes.length > 1)
+        ) {
+          query.url = '';
+        }
 
-        sizeProperties.push(
+        (config.densities || [1]).forEach((density) => {
+          const sizeQuery: Record<string, string> = {
+            ...query,
+            ...(typeof size === 'number' ? { width: `${size * density}` } : {}),
+          };
+
+          sizeProperties.push(
+            types.objectProperty(
+              types.numericLiteral(density),
+              buildRequireStatement(types, clone(requireArgs), sizeQuery),
+            ),
+          );
+        });
+
+        typeProperties.push(
           types.objectProperty(
-            types.numericLiteral(density),
-            buildRequireStatement(types, clone(requireArgs), sizeQuery),
+            typeof size === 'string' ? types.identifier(size) : types.numericLiteral(size),
+            types.objectExpression(sizeProperties),
           ),
         );
-      });
-
-      typeProperties.push(
-        types.objectProperty(
-          typeof size === 'string' ? types.identifier(size) : types.numericLiteral(size),
-          types.objectExpression(sizeProperties),
-        ),
-      );
-    });
+      },
+    );
 
     properties.push(types.objectProperty(types.identifier(type), types.objectExpression(typeProperties)));
   });

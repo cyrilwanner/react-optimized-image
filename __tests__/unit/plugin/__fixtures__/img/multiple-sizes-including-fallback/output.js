@@ -9,10 +9,10 @@ export default () => (
       rawSrc={{
         fallback: {
           400: {
-            1: require('./image.png?width=400'),
+            1: require('./image.png?width=400&url'),
           },
           800: {
-            1: require('./image.png?width=800'),
+            1: require('./image.png?width=800&url'),
           },
         },
       }}
