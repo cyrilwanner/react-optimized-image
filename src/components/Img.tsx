@@ -47,10 +47,9 @@ const getImageType = (densities: Record<number, ImgSrc>): string => {
 
 const buildSources = (
   type: Record<number | string, Record<number, ImgSrc>>,
+  sizes: Array<number | string>,
   breakpoints?: number[],
 ): ReactElement[] => {
-  const sizes = (Object.keys(type) as unknown) as (number | string)[];
-
   return sizes.map((size, i) => {
     const densities = type[size];
     const imageType = `image/${getImageType(densities)}`;
@@ -134,8 +133,17 @@ const Img = ({
 
   return (
     <picture>
-      {rawSrc.webp && buildSources(rawSrc.webp, breakpoints || sizes)}
-      {buildSources(rawSrc.fallback, breakpoints || sizes)}
+      {rawSrc.webp &&
+        buildSources(
+          rawSrc.webp,
+          sizes || ((Object.keys(rawSrc.webp) as unknown) as (number | string)[]),
+          breakpoints || sizes,
+        )}
+      {buildSources(
+        rawSrc.fallback,
+        sizes || ((Object.keys(rawSrc.fallback) as unknown) as (number | string)[]),
+        breakpoints || sizes,
+      )}
       <img src={fallbackImage.toString()} {...imgProps} style={styles} />
     </picture>
   );
