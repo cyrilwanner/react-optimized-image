@@ -1,6 +1,6 @@
 {
   "name": "react-optimized-image",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "React component for serving optimized images.",
   "keywords": [
     "react",
