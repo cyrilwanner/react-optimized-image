@@ -1,7 +1,8 @@
 import React, { ReactElement } from 'react';
+import { ImgSrc } from './types';
 
 export interface SvgProps {
-  src: string;
+  src: ImgSrc;
   className?: string;
 }
 
@@ -17,7 +18,7 @@ const Svg = ({ src, className }: SvgProps): ReactElement => {
     );
   }
 
-  return <span dangerouslySetInnerHTML={{ __html: src }} />;
+  return <span dangerouslySetInnerHTML={{ __html: src.toString() }} />;
 };
 
 export default Svg;

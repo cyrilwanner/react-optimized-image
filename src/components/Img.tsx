@@ -1,12 +1,5 @@
 import React, { ReactElement, DetailedHTMLProps, ImgHTMLAttributes, CSSProperties } from 'react';
-
-export interface ImgSrc {
-  src: string;
-  width: number;
-  height: number;
-  format: string;
-  toString(): string;
-}
+import { ImgSrc } from './types';
 
 export interface ImgProps
   extends Omit<Omit<DetailedHTMLProps<ImgHTMLAttributes<HTMLImageElement>, HTMLImageElement>, 'sizes'>, 'src'> {
