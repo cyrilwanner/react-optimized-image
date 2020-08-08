@@ -11,7 +11,7 @@ const StyledImg = styled(Img)({
 });
 export default () => (
   <div>
-    <StyledSvg src={require('./image.svg?include')} />
+    <StyledSvg rawSrc={require('./image.svg?include')} />
     <StyledImg
       src={JpgImage}
       webp

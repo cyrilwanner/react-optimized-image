@@ -6,7 +6,7 @@ const Img = require('react-optimized-image').default;
 
 export default () => (
   <div>
-    <Icon src={require('./image.svg?include')} />
+    <Icon rawSrc={require('./image.svg?include')} />
     <Img
       src={require('./image.png')}
       sizes={[400, 800]}

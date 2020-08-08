@@ -1,6 +1,6 @@
-import clone from 'clone';
 import { NodePath } from '@babel/core';
 import { JSXElement, JSXAttribute, JSXOpeningElement, CallExpression, ObjectProperty } from '@babel/types';
+import clone from 'clone';
 import { Babel } from '..';
 import { getAttribute, getBooleanAttribute, getNumberedArrayAttribute, getTypeAttribute } from '../utils/jsx';
 import { buildRequireStatement } from '../utils/transform';

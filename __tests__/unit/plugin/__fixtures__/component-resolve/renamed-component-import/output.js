@@ -2,6 +2,6 @@ import React from 'react';
 import { Svg as Icon } from 'react-optimized-image';
 export default () => (
   <div>
-    <Icon src={require('./image.svg?include')} />
+    <Icon rawSrc={require('./image.svg?include')} />
   </div>
 );
