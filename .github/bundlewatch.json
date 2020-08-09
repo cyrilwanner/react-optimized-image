@@ -1,0 +1,8 @@
+{
+  "files": [
+    {
+      "path": "./lib/**/*.*",
+      "compression": "none"
+    }
+  ]
+}
