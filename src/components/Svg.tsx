@@ -9,16 +9,17 @@ interface SvgInnerProps extends React.SVGProps<SVGSVGElement> {
   rawSrc: { default: React.ElementType };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const Svg = ({ src, ...props }: SvgProps): ReactElement => {
-  const inner = ({ src, ...props } as unknown) as SvgInnerProps;
+  const { rawSrc, ...innerProps } = (props as unknown) as SvgInnerProps;
 
-  if (!inner.rawSrc) {
+  if (!rawSrc) {
     throw new Error(
       "Babel plugin 'react-optimized-image/plugin' not installed or this component could not be recognized by it.",
     );
   }
 
-  const SvgComponent: React.ElementType = inner.rawSrc.default || inner.rawSrc;
+  const SvgComponent: React.ElementType = rawSrc.default || rawSrc;
 
   if (typeof SvgComponent !== 'function') {
     throw new Error(
@@ -26,7 +27,7 @@ const Svg = ({ src, ...props }: SvgProps): ReactElement => {
     );
   }
 
-  return <SvgComponent {...props} />;
+  return <SvgComponent {...innerProps} />;
 };
 
 export default Svg;
