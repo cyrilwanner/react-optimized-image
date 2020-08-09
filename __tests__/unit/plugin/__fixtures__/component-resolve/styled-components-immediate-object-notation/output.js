@@ -9,6 +9,6 @@ const styles = {
 };
 export default () => (
   <div>
-    <styles.StyledSvg src={require('./image.svg?include')} />
+    <styles.StyledSvg rawSrc={require('./image.svg?include')} />
   </div>
 );

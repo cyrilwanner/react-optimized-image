@@ -1,24 +1,32 @@
 import React, { ReactElement } from 'react';
 import { ImgSrc } from './types';
 
-export interface SvgProps {
+export interface SvgProps extends React.SVGProps<SVGSVGElement> {
   src: ImgSrc;
-  className?: string;
 }
 
-/* eslint-disable react/no-danger */
-const Svg = ({ src, className }: SvgProps): ReactElement => {
-  if (className) {
-    return (
-      <span
-        dangerouslySetInnerHTML={{
-          __html: src.toString().replace(/<svg([\s|>])/, `<svg class=${JSON.stringify(className)}$1`),
-        }}
-      />
+interface SvgInnerProps extends React.SVGProps<SVGSVGElement> {
+  rawSrc: { default: React.ElementType };
+}
+
+const Svg = ({ src, ...props }: SvgProps): ReactElement => {
+  const inner = ({ src, ...props } as unknown) as SvgInnerProps;
+
+  if (!inner.rawSrc) {
+    throw new Error(
+      "Babel plugin 'react-optimized-image/plugin' not installed or this component could not be recognized by it.",
     );
   }
 
-  return <span dangerouslySetInnerHTML={{ __html: src.toString() }} />;
+  const SvgComponent: React.ElementType = inner.rawSrc.default || inner.rawSrc;
+
+  if (typeof SvgComponent !== 'function') {
+    throw new Error(
+      "No react component generated. Please set `includeStrategy` option of optimized-images-loader to 'react'",
+    );
+  }
+
+  return <SvgComponent {...props} />;
 };
 
 export default Svg;

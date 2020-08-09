@@ -13,7 +13,6 @@ export interface ImgProps
   densities?: number[];
   breakpoints?: number[];
 }
-
 interface ImgInnerProps {
   rawSrc: {
     fallback: Record<number | string, Record<number, ImgSrc>>;

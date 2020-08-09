@@ -10,7 +10,7 @@ const ProxyImg = Img;
 const Image = ProxyImg;
 export default () => (
   <div>
-    <Icon src={require('./image.svg?include')} />
+    <Icon rawSrc={require('./image.svg?include')} />
     <Image
       src={require('./image.png')}
       webp

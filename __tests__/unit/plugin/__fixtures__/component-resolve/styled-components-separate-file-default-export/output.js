@@ -3,6 +3,6 @@ import StyledSvg from './styles.js';
 import SvgImage from './image.svg';
 export default () => (
   <div>
-    <StyledSvg src={require('./image.svg?include')} />
+    <StyledSvg rawSrc={require('./image.svg?include')} />
   </div>
 );

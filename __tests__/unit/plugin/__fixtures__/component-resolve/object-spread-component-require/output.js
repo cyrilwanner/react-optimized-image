@@ -4,7 +4,7 @@ const { Svg, Img } = require('react-optimized-image');
 
 export default () => (
   <div>
-    <Svg src={require('./image.svg?include')} />
+    <Svg rawSrc={require('./image.svg?include')} />
     <Img
       src={require('./image.jpg')}
       webp
