@@ -133,7 +133,7 @@ const buildRawSrcAttribute = (
         (config.densities || [1]).forEach((density) => {
           const sizeQuery: Record<string, string> = {
             ...query,
-            ...(typeof size === 'number' ? { width: `${size * density}` } : {}),
+            ...(typeof size === 'number' && size > 0 ? { width: `${size * density}` } : {}),
           };
 
           sizeProperties.push(
