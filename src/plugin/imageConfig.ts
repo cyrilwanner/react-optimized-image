@@ -8,6 +8,7 @@ export interface ImageConfig {
   inline?: boolean;
   url?: boolean;
   original?: boolean;
+  withDimensions?: boolean;
 }
 
 export interface GlobalConfig {
