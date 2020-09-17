@@ -9,6 +9,7 @@ export interface ImgProps
   inline?: boolean;
   url?: boolean;
   original?: boolean;
+  addWidthAndHeight?: boolean;
   sizes?: number[];
   densities?: number[];
   breakpoints?: number[];
@@ -99,6 +100,7 @@ const Img = ({
   sizes,
   densities,
   breakpoints,
+  addWidthAndHeight,
   style,
   ...props
 }: ImgProps): ReactElement | null => {
@@ -114,13 +116,21 @@ const Img = ({
   // find fallback image
   const fallbackImage = findFallbackImage(src, rawSrc);
 
+  let dimensions;
+  if (addWidthAndHeight === true) {
+    dimensions = {
+      width: fallbackImage.width,
+      height: fallbackImage.height,
+    }
+  }
+
   // return normal image tag if only 1 version is needed
   if (
     !rawSrc.webp &&
     Object.keys(rawSrc.fallback).length === 1 &&
     Object.keys(rawSrc.fallback[(Object.keys(rawSrc.fallback)[0] as unknown) as number]).length === 1
   ) {
-    return <img src={fallbackImage.toString()} {...imgProps} style={styles} />;
+    return <img src={fallbackImage.toString()} {...dimensions} {...imgProps} style={styles} />;
   }
 
   return (
@@ -136,7 +146,7 @@ const Img = ({
         sizes || ((Object.keys(rawSrc.fallback) as unknown) as (number | string)[]),
         breakpoints || sizes,
       )}
-      <img src={fallbackImage.toString()} {...imgProps} style={styles} />
+      <img src={fallbackImage.toString()} {...dimensions} {...imgProps} style={styles} />
     </picture>
   );
 };

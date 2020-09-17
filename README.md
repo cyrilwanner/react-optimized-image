@@ -131,6 +131,7 @@ export default () => (
 | inline | | `boolean` | If true, the image will get forced to an inline data-uri (e.g. `data:image/png;base64,...`). |
 | url | | `boolean` | If true, the image will get forced to be referenced with an url, even if it is a small image and would get inlined by default. |
 | original | | `boolean` | If true, the image will not get optimized (but still resized if the `sizes` property is present). |
+| addWidthAndHeight | | `boolean` | If true, `width` and `height` attributes will be added automatically to the `<img>` tag with values extracted from the original image. These values will always be overwritten when explicitly specified. |
 | type | | `string` | So you don't have to repeat yourself by setting the same sizes or other properties on many images, specify the image type which equals to one in your [global image config](#global-image-config). |
 | *anything else* | | `ImgHTMLAttributes` | All other properties will be directly passed to the `<img>` tag. So it would for example be possible to use native lazy-loading with `loading="lazy"`. |
 

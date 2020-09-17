@@ -8,6 +8,7 @@ export interface ImageConfig {
   inline?: boolean;
   url?: boolean;
   original?: boolean;
+  addWidthAndHeight?: boolean;
 }
 
 export interface GlobalConfig {
