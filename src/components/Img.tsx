@@ -70,8 +70,9 @@ const buildSources = (
 
     const densities = type[size];
     const imageType = `image/${getImageType(densities)}`;
+    const key = `${imageType}/${media || 'original'}`;
 
-    return <source key={`${imageType}/${size}`} type={imageType} srcSet={buildSrcSet(densities)} media={media} />;
+    return <source key={key} type={imageType} srcSet={buildSrcSet(densities)} media={media} />;
   });
 };
 
