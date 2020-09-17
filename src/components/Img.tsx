@@ -121,7 +121,7 @@ const Img = ({
     dimensions = {
       width: fallbackImage.width,
       height: fallbackImage.height,
-    }
+    };
   }
 
   // return normal image tag if only 1 version is needed
